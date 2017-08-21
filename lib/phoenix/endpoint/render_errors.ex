@@ -102,15 +102,21 @@ defmodule Phoenix.Endpoint.RenderErrors do
   end
 
   defp maybe_fetch_format(conn, opts) do
-    accepts(conn, Keyword.fetch!(opts, :accepts))
-  rescue
-    e in Phoenix.NotAcceptableError ->
-      fallback_format = Keyword.fetch!(opts, :accepts) |> List.first()
-      Logger.warn("Could not render errors due to #{Exception.message(e)}. " <>
-                  "Errors will be rendered using the first accepted format #{inspect fallback_format} as fallback. " <>
-                  "Please customize the :accepts option under the :render_errors configuration " <>
-                  "in your endpoint if you want to support other formats or choose another fallback")
-      put_format(conn, fallback_format)
+    unless get_format(conn) do
+      try do
+        accepts(conn, Keyword.fetch!(opts, :accepts))
+      rescue
+        e in Phoenix.NotAcceptableError ->
+          fallback_format = Keyword.fetch!(opts, :accepts) |> List.first()
+          Logger.warn("Could not render errors due to #{Exception.message(e)}. " <>
+                      "Errors will be rendered using the first accepted format #{inspect fallback_format} as fallback. " <>
+                      "Please customize the :accepts option under the :render_errors configuration " <>
+                      "in your endpoint if you want to support other formats or choose another fallback")
+          put_format(conn, fallback_format)
+      end
+    else
+      conn
+    end
   end
 
   defp status(:error, error), do: Plug.Exception.status(error)
